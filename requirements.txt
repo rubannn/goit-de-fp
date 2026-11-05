@@ -1,0 +1,2 @@
+apache-airflow-providers-mysql==6.5.0
+apache-airflow-providers-common-sql==1.32.0

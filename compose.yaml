@@ -1,0 +1,63 @@
+name: goit-de-hw-07
+
+services:
+  mysql:
+    image: mysql:8.4.8
+    command: ["--secure-file-priv=/var/lib/mysql-files", "--default-time-zone=+00:00"]
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Create .env from .env.example}
+      MYSQL_DATABASE: olympic_dataset
+      MYSQL_USER: ${MYSQL_USER:-airflow}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
+      TZ: UTC
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./data:/datasets:ro
+      - ./mysql/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "MYSQL_PWD=$$MYSQL_PASSWORD mysql --protocol=TCP -h 127.0.0.1 -u$$MYSQL_USER -D olympic_dataset -Nse 'SELECT COUNT(*) > 0 FROM athlete_event_results' | grep -qx 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  airflow:
+    build: .
+    command: standalone
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      AIRFLOW_HOME: /opt/airflow/state
+      AIRFLOW__LOGGING__BASE_LOG_FOLDER: /opt/airflow/logs
+      AIRFLOW__LOGGING__DAG_PROCESSOR_MANAGER_LOG_LOCATION: /opt/airflow/logs/dag_processor_manager/dag_processor_manager.log
+      AIRFLOW__SCHEDULER__CHILD_PROCESS_LOG_DIRECTORY: /opt/airflow/logs/scheduler
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__EXECUTOR: SequentialExecutor
+      AIRFLOW__CORE__DEFAULT_TIMEZONE: utc
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: sqlite:////opt/airflow/state/airflow.db
+      AIRFLOW__API__AUTH_BACKENDS: airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session
+      AIRFLOW__SCHEDULER__SCHEDULER_HEARTBEAT_SEC: "1"
+      AIRFLOW__SCHEDULER__MIN_FILE_PROCESS_INTERVAL: "5"
+      AIRFLOW__WEBSERVER__WORKERS: "1"
+      AIRFLOW_CONN_GOIT_MYSQL_DB: mysql://${MYSQL_USER:-airflow}:${MYSQL_PASSWORD}@mysql:3306/olympic_dataset
+      TZ: UTC
+    volumes:
+      - ./dags:/opt/airflow/dags:ro
+      - airflow_state:/opt/airflow/state
+      - airflow_logs:/opt/airflow/logs
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail --silent http://localhost:8080/health | python -c \"import json,sys; h=json.load(sys.stdin); sys.exit(0 if all(h[k]['status']=='healthy' for k in ('metadatabase','scheduler')) else 1)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+
+volumes:
+  mysql_data:
+  airflow_state:
+  airflow_logs:
