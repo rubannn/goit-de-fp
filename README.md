@@ -1,41 +1,6 @@
 ﻿# goit-de-fp — фінальний проєкт Data Engineering
 
-Проєкт складається з двох частин: Spark Structured Streaming (MySQL → Kafka → агрегати → Kafka та MySQL) і Batch Data Lake (CSV → bronze → silver → gold із запуском через Airflow).
-
-Підготовлено локальне середовище, реалізовано Streaming Pipeline і три Spark jobs Batch Data Lake з DAG `olympic_batch`.
-
-Звіт про виконання проєкту ведеться українською мовою безпосередньо в цьому README. Результати наступних етапів і знімки екрана слід додавати до відповідних розділів нижче.
-
-## Звіт: підготовка середовища
-
-Дата виконання: 6 листопада 2026 року. За вибором користувача використано локальну MySQL та оригінальні CSV із завдання.
-
-| Компонент | Результат |
-| --- | --- |
-| Compose | Окремий проєкт `goit-de-fp`: MySQL, Kafka та Airflow зі Spark |
-| Spark | 4.1.1, Scala 2.13, Java 17, Python 3.12, master `local[2]` |
-| Вхідна схема | `olympic_dataset` |
-| `athlete_bio` | Імпортовано 155 861 рядок; значення `athlete_id` унікальні |
-| `athlete_event_results` | Імпортовано 316 834 рядки |
-| Вихідна схема | `olympic_results`; локальному користувачу надано права запису |
-| Kafka | Створено топіки `athlete_event_results`, `athlete_avg_stats`, `environment_check` |
-| Сховище | Спільні каталоги landing/bronze/silver/gold і checkpoints на хості |
-| Облікові дані | Випадкові локальні паролі збережено в `.env`, який виключено з Git |
-
-Образ успішно зібрано. Перевірка залежностей `python -m pip check` повернула `No broken requirements found`. Команда `make check` завершилася з кодом 0:
-
-```text
-PASS Spark 4.1.1: JVM and Python workers
-PASS JDBC athlete_bio: 155861 rows
-PASS JDBC athlete_event_results: 316834 rows
-PASS output MySQL: write/read/drop scratch table
-PASS Kafka: message written and read back
-PASS shared data/checkpoint paths and Airflow spark-default connection
-```
-
-Перевірено виконання Spark і Python workers, читання обох таблиць через JDBC, запис і читання вихідної MySQL-схеми, обмін повідомленням через Kafka, доступ до спільних каталогів і з'єднання Airflow `spark-default`.
-
-Повний локальний журнал збережено в `artifacts/environment-check.log` і виключено з Git. Перевірочні повідомлення залишаються в окремому топіку `environment_check`; тимчасову перевірочну таблицю MySQL видалено після успішної перевірки.
+Проєкт складається з двох частин: Spark Structured Streaming (MySQL → Kafka → агрегати → Kafka та MySQL) і Batch Data Lake (CSV → bronze → silver → gold із запуском через Airflow DAG `olympic_batch`).
 
 ## Звіт: частина 1 — Streaming Pipeline
 
@@ -208,7 +173,7 @@ make check
 
 `make download` завантажує CSV з адрес, наведених у завданні, до `data/landing/` без зміни вмісту. `make seed` створює та заповнює локальні таблиці MySQL; наявні непорожні таблиці зберігаються. Щоб зберегти початкові некоректні значення для подальшого очищення, поля мають тип TEXT, крім числового `athlete_id`. Імпорт фіксується однією транзакцією для кожної таблиці.
 
-`make topics` створює три стандартні локальні топіки з прикладу. `make check` запускає перевірку середовища, результати якої наведено у звіті вище.
+`make topics` створює три стандартні локальні топіки з прикладу. `make check` перевіряє Spark, читання обох таблиць через JDBC, запис/читання вихідної MySQL-схеми, обмін повідомленням через Kafka та спільні каталоги даних і checkpoint.
 
 ## Налаштування та доступ
 
