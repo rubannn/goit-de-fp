@@ -226,6 +226,7 @@ checkpoints/
 
 # Local verification artifacts
 AGENTS.md
+/dags/_local_*.py
 artifacts/
 tmp/
 temp/

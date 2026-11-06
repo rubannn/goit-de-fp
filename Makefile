@@ -2,6 +2,7 @@ COMPOSE = docker compose
 PYTHON = python
 WAIT_TIMEOUT = 600
 RESULTS_ARGS = --verify
+BATCH_ARGS =
 
 help:
 	@echo make init     - Create local settings and folders
@@ -13,12 +14,21 @@ help:
 	@echo make stream   - Publish source once and process available events
 	@echo make results  - Show and verify streaming results
 	@echo make test     - Check transformations and sink recovery
+	@echo make batch    - Run the three Spark jobs through Airflow
+	@echo make batch-check - Verify bronze, silver and gold outputs
 	@echo make status   - Show container status
 	@echo make logs     - Follow service logs
 	@echo make password - Show the Airflow admin password
 	@echo make stop     - Stop services and preserve data
 
 .PHONY: help init download run seed topics check stream results test status logs password stop
+.PHONY: batch batch-check
+
+batch:
+	$(COMPOSE) exec -T airflow python /opt/airflow/project/scripts/run_batch.py $(BATCH_ARGS)
+
+batch-check:
+	$(COMPOSE) exec -T airflow spark-submit /opt/airflow/project/scripts/check_batch.py
 
 init:
 	$(PYTHON) scripts/setup.py
