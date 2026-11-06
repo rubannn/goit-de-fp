@@ -26,7 +26,7 @@
 
 ![Результати Kafka](img/streaming/kafka_output.png)
 
-Знімки зроблено з реальних вікон PowerShell під час виконання `make results` в окремих режимах перегляду MySQL і Kafka. Локальний скрипт `artifacts/capture_screenshots.py`, допоміжні скрипти та журнали виключені з Git; готові PNG збережено в `img/streaming/`.
+Знімки зроблено з вікон PowerShell під час виконання `make results` в окремих режимах перегляду MySQL і Kafka.
 
 Потік даних: `olympic_dataset.athlete_event_results` → Kafka `athlete_event_results` → Spark Structured Streaming + `olympic_dataset.athlete_bio` → Kafka `athlete_avg_stats` і MySQL `olympic_results.athlete_avg_stats`.
 
@@ -133,7 +133,6 @@ make batch-check
 
 ![Три успішні задачі DAG](img/batch/dag_success.png)
 
-Знімки зроблено з реального вікна Edge з інтерфейсом Airflow. Окремий скрипт `artifacts/capture_batch_screenshots.py`, інструменти браузера та допоміжні файли виключені з Git.
 
 ## Локальне середовище
 
@@ -202,8 +201,7 @@ make password
 - `project_config.py`, `spark-defaults.conf` — спільні налаштування та Spark-конектори.
 - `data/landing`, `data/bronze`, `data/silver`, `data/gold` — локальні дані, виключені з Git.
 - `checkpoints/` — стан потокової обробки, виключений із Git.
-- `img/streaming/`, `img/batch/` — знімки екрана відповідно до позначок у плані.
-- `artifacts/` — тимчасові журнали, результати перевірок і локальні скрипти створення знімків реальних вікон; виключені з Git.
+- `img/streaming/`, `img/batch/` — знімки екрана результатів виконання.
 - `mysql/bootstrap/` — створення вихідної схеми під час першого запуску нового MySQL volume.
 
 Batch jobs використовують спільний корінь `DATA_ROOT`; стандартно це `/opt/airflow/project/data` всередині контейнера та `data/` на хості.
