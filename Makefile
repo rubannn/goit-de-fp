@@ -1,34 +1,54 @@
 COMPOSE = docker compose
 PYTHON = python
-WAIT_TIMEOUT = 300
+WAIT_TIMEOUT = 600
+RESULTS_ARGS = --verify
 
-# Keep help first: both GNU Make and Embarcadero Make use it by default.
 help:
-	@echo make init     - Create .env if missing; preserve existing settings
-	@echo make build    - Build the Airflow image
-	@echo make run      - Build and start services; wait until healthy
-	@echo make up       - Start services without rebuilding; wait until healthy
-	@echo make status   - Show service status
+	@echo make init     - Create local settings and folders
+	@echo make download - Download original CSV datasets
+	@echo make run      - Build, start and wait for services
+	@echo make seed     - Import CSV into local MySQL
+	@echo make topics   - Create required local Kafka topics
+	@echo make check    - Verify the environment
+	@echo make stream   - Publish source once and process available events
+	@echo make results  - Show and verify streaming results
+	@echo make test     - Check transformations and sink recovery
+	@echo make status   - Show container status
 	@echo make logs     - Follow service logs
 	@echo make password - Show the Airflow admin password
-	@echo make results  - Show MySQL medal count results
-	@echo make stop     - Stop services and keep data
-	@echo make down     - Remove containers and keep data volumes
-	@echo make clean    - DELETE project data volumes and the local Airflow image
+	@echo make stop     - Stop services and preserve data
 
-.PHONY: help init build run up status logs password results stop down clean
+.PHONY: help init download run seed topics check stream results test status logs password stop
 
 init:
-	$(PYTHON) -c "from pathlib import Path; p = Path('.env'); p.exists() or p.write_bytes(Path('.env.example').read_bytes())"
+	$(PYTHON) scripts/setup.py
 
-build: init
-	$(COMPOSE) build
+download: init
+	$(PYTHON) scripts/download_data.py
 
 run: init
 	$(COMPOSE) up -d --build --wait --wait-timeout $(WAIT_TIMEOUT)
 
-up: init
-	$(COMPOSE) up -d --wait --wait-timeout $(WAIT_TIMEOUT)
+seed:
+	$(COMPOSE) exec -T airflow python /opt/airflow/project/scripts/seed_mysql.py
+
+topics:
+	$(COMPOSE) exec -T kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic athlete_event_results --partitions 2 --replication-factor 1
+	$(COMPOSE) exec -T kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic athlete_avg_stats --partitions 2 --replication-factor 1
+	$(COMPOSE) exec -T kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic environment_check --partitions 1 --replication-factor 1
+
+check:
+	$(COMPOSE) exec -T airflow spark-submit /opt/airflow/project/scripts/check_environment.py
+
+stream:
+	$(COMPOSE) exec -T airflow spark-submit /opt/airflow/project/streaming/mysql_to_kafka.py
+	$(COMPOSE) exec -T airflow spark-submit /opt/airflow/project/streaming/streaming_pipeline.py --available-now
+
+results:
+	$(COMPOSE) exec -T airflow spark-submit /opt/airflow/project/streaming/inspect_output.py $(RESULTS_ARGS)
+
+test:
+	$(COMPOSE) exec -T airflow spark-submit /opt/airflow/project/scripts/check_streaming.py
 
 status:
 	$(COMPOSE) ps
@@ -39,14 +59,5 @@ logs:
 password:
 	$(COMPOSE) exec -T airflow cat /opt/airflow/state/standalone_admin_password.txt
 
-results:
-	$(COMPOSE) exec -T airflow python -c "from airflow.providers.mysql.hooks.mysql import MySqlHook; print(*MySqlHook(mysql_conn_id='goit_mysql_db').get_records('SELECT * FROM olympic_dataset.medal_counts ORDER BY id'), sep='\n')"
-
 stop:
 	$(COMPOSE) stop
-
-down:
-	$(COMPOSE) down
-
-clean:
-	$(COMPOSE) down --volumes --rmi local --remove-orphans
