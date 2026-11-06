@@ -1,0 +1,1 @@
+"""Olympic results streaming pipeline."""
