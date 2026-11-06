@@ -1,4 +1,4 @@
-name: goit-de-hw-07
+name: goit-de-fp
 
 services:
   mysql:
@@ -13,11 +13,37 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
       - ./data:/datasets:ro
-      - ./mysql/init:/docker-entrypoint-initdb.d:ro
+      - ./mysql/bootstrap:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "MYSQL_PWD=$$MYSQL_PASSWORD mysql --protocol=TCP -h 127.0.0.1 -u$$MYSQL_USER -D olympic_dataset -Nse 'SELECT COUNT(*) > 0 FROM athlete_event_results' | grep -qx 1"]
+      test: ["CMD-SHELL", "MYSQL_PWD=$$MYSQL_PASSWORD mysql --protocol=TCP -h 127.0.0.1 -u$$MYSQL_USER -D olympic_dataset -Nse 'SELECT 1' | grep -qx 1"]
       interval: 10s
       timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  kafka:
+    image: apache/kafka:3.9.1
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --list >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
       retries: 30
       start_period: 30s
 
@@ -27,6 +53,9 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+      kafka:
+        condition: service_healthy
+    env_file: .env
     ports:
       - "127.0.0.1:8080:8080"
     environment:
@@ -45,9 +74,15 @@ services:
       AIRFLOW__SCHEDULER__MIN_FILE_PROCESS_INTERVAL: "5"
       AIRFLOW__WEBSERVER__WORKERS: "1"
       AIRFLOW_CONN_GOIT_MYSQL_DB: mysql://${MYSQL_USER:-airflow}:${MYSQL_PASSWORD}@mysql:3306/olympic_dataset
+      AIRFLOW_CONN_SPARK-DEFAULT: '{"conn_type":"spark","host":"local[2]","extra":{"deploy-mode":"client"}}'
+      PYTHONPATH: /opt/airflow/project
+      SPARK_LOCAL_IP: 127.0.0.1
+      PYSPARK_PYTHON: /usr/local/bin/python
       TZ: UTC
     volumes:
       - ./dags:/opt/airflow/dags:ro
+      - .:/opt/airflow/project
+      - spark_ivy:/opt/airflow/ivy
       - airflow_state:/opt/airflow/state
       - airflow_logs:/opt/airflow/logs
     healthcheck:
@@ -61,3 +96,5 @@ volumes:
   mysql_data:
   airflow_state:
   airflow_logs:
+  kafka_data:
+  spark_ivy:

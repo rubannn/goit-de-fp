@@ -225,5 +225,18 @@ __marimo__/
 checkpoints/
 
 # Local verification artifacts
+AGENTS.md
 artifacts/
+tmp/
+temp/
+*.tmp
+*.part
+*.bak
+~$*
 *.zip
+*.jar
+logs/
+.ivy2/
+spark-warehouse/
+derby.log
+metastore_db/

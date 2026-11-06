@@ -1,2 +1,6 @@
 apache-airflow-providers-mysql==6.5.0
 apache-airflow-providers-common-sql==1.32.0
+apache-airflow-providers-apache-spark==5.5.1
+pyspark==4.1.1
+requests==2.32.5
+PyMySQL==1.1.2
