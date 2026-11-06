@@ -2,7 +2,7 @@
 
 Проєкт складається з двох частин: Spark Structured Streaming (MySQL → Kafka → агрегати → Kafka та MySQL) і Batch Data Lake (CSV → bronze → silver → gold із запуском через Airflow).
 
-Підготовлено локальне середовище, реалізовано Streaming Pipeline і три Spark jobs Batch Data Lake з DAG `olympic_batch`. Попередній DAG `olympic_medals` збережено.
+Підготовлено локальне середовище, реалізовано Streaming Pipeline і три Spark jobs Batch Data Lake з DAG `olympic_batch`.
 
 Звіт про виконання проєкту ведеться українською мовою безпосередньо в цьому README. Результати наступних етапів і знімки екрана слід додавати до відповідних розділів нижче.
 
@@ -241,7 +241,6 @@ make password
 - `docs/` — локальні матеріали завдання та чек-лист, виключені з Git; звіт ведеться в `README.md`.
 - `artifacts/` — тимчасові журнали, результати перевірок і локальні скрипти створення знімків реальних вікон; виключені з Git.
 - `mysql/bootstrap/` — створення вихідної схеми під час першого запуску нового MySQL volume.
-- `mysql/init/` — збережені скрипти попередньої роботи; новий Compose їх не запускає.
 
 Batch jobs використовують спільний корінь `DATA_ROOT`; стандартно це `/opt/airflow/project/data` всередині контейнера та `data/` на хості.
 
